@@ -68,6 +68,14 @@ export const FAKE_CHIP_INIT = String.raw`
           flash[addr + i] = payload[4 + i];
         }
         pushOut([0x4F, 0x4B]);
+      } else if (cmd === 0x3D) { // flash_readSha — chip computes SHA256 of region
+        const addr = payload[0] | (payload[1]<<8) | (payload[2]<<16) | (payload[3]<<24);
+        const length = payload[4] | (payload[5]<<8) | (payload[6]<<16) | (payload[7]<<24);
+        const region = flash.slice(addr, addr + length);
+        crypto.subtle.digest('SHA-256', region).then((hashBuf) => {
+          const hash = new Uint8Array(hashBuf);
+          pushOut([0x4F, 0x4B, 32, 0, ...hash]);
+        });
       } else if (cmd === 0x32) { // flash read
         const addr = payload[0] | (payload[1]<<8) | (payload[2]<<16) | (payload[3]<<24);
         const length = payload[4] | (payload[5]<<8) | (payload[6]<<16) | (payload[7]<<24);

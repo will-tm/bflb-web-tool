@@ -16,6 +16,17 @@ export async function fetchEflashLoader(chip) {
   return buf;
 }
 
+function hex(buf) {
+  return Array.from(buf).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function sha256Equal(a, b) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
+
 async function fetchAsset(url) {
   if (!url) return null;
   const r = await fetch(url);
@@ -125,17 +136,22 @@ export async function flash({ chip, port, regions, flashBaud = null, verify = tr
     }
 
     if (verify) {
+      // SHA256-based verify: ask the chip to hash each region and compare to
+      // the host-side SHA256. One small round-trip per region instead of
+      // streaming megabytes back — far less sensitive to chunk-level glitches
+      // (especially on Web Serial polyfills like Firefox extensions).
       let vDone = 0;
       for (const { address, data } of regions) {
-        log(`Verifying 0x${address.toString(16)}+${data.length}`);
-        const back = await isp.flashRead(address, data.length, (s, t) => {
-          const frac = (vDone + s) / total;
-          setProg(0.78 + 0.18 * frac, `Verifying ${(s / 1024).toFixed(1)}/${(t / 1024).toFixed(1)} kB`);
-        });
-        for (let i = 0; i < data.length; i++) {
-          if (back[i] !== data[i]) {
-            throw new Error(`verify mismatch at 0x${(address + i).toString(16)}: wrote 0x${data[i].toString(16)}, read 0x${back[i].toString(16)}`);
-          }
+        const expected = new Uint8Array(await crypto.subtle.digest('SHA-256', data));
+        setProg(0.80 + 0.17 * (vDone / total), `Verifying SHA256 @ 0x${address.toString(16)}`);
+        log(`Verifying SHA256 of 0x${address.toString(16)}+${data.length}`);
+        const got = await isp.flashReadSha(address, data.length);
+        if (!sha256Equal(got, expected)) {
+          throw new Error(
+            `SHA256 mismatch @ 0x${address.toString(16)}+${data.length}\n` +
+            `  expected: ${hex(expected)}\n` +
+            `  chip:     ${hex(got)}`
+          );
         }
         vDone += data.length;
       }

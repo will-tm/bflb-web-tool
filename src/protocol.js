@@ -30,9 +30,13 @@ export const CMD = {
   FLASH_WRITE:       0x31,
   FLASH_READ:        0x32,
   FLASH_BOOT:        0x33,
+  FLASH_XIP_READ:    0x34,
+  FLASH_READ_JID:    0x36,
   PROGRAM_CHECK:     0x3A,
   FLASH_LOAD_PARA:   0x3B,
   FLASH_CHIP_ERASE:  0x3C,
+  FLASH_READ_SHA:    0x3D,
+  FLASH_XIP_READ_SHA:0x3E,
   EFUSE_WRITE:       0x40,
   EFUSE_READ:        0x41,
   MEM_WRITE:         0x50,
@@ -390,6 +394,23 @@ export class ISPClient {
       sent += left;
       if (onProgress) onProgress(sent, payload.length);
     }
+  }
+
+  /**
+   * Ask the chip for SHA256 of a flash region. Returns a 32-byte Uint8Array.
+   * One short round-trip — much more reliable than reading the whole region
+   * back over the wire (one dropped chunk would invalidate a byte-compare).
+   */
+  async flashReadSha(start, length) {
+    const p = new Uint8Array(8);
+    const dv = new DataView(p.buffer);
+    dv.setUint32(0, start >>> 0, true);
+    dv.setUint32(4, length >>> 0, true);
+    // Larger regions take longer for the chip to hash; budget conservatively.
+    const timeout = Math.max(5000, 2000 + Math.ceil(length / 1024) * 2);
+    const sha = await this.cmdAck(CMD.FLASH_READ_SHA, p, true, timeout);
+    if (sha.length !== 32) throw new Error(`flash_readSha returned ${sha.length} bytes, expected 32`);
+    return sha;
   }
 
   async flashRead(start, length, onProgress) {
