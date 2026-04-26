@@ -4,10 +4,40 @@
   "private": true,
   "type": "module",
   "description": "Web Serial flasher for Bouffalo Lab BL60x/BL61x/BL70x(L)/BL606P/BL808 chips.",
+  "homepage": "https://bflb.will-tm.io",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/will-tm/bflb-web-tool.git"
+  },
+  "bugs": {
+    "url": "https://github.com/will-tm/bflb-web-tool/issues"
+  },
+  "author": "will-tm",
+  "license": "MIT",
+  "keywords": [
+    "bouffalo",
+    "bouffalolab",
+    "bl602",
+    "bl604",
+    "bl616",
+    "bl618",
+    "bl702",
+    "bl702l",
+    "bl704",
+    "bl704l",
+    "bl606p",
+    "bl808",
+    "flasher",
+    "web-serial",
+    "isp",
+    "embedded",
+    "firmware"
+  ],
   "scripts": {
     "serve": "python3 -m http.server 8765",
     "test:unit": "node --test test/protocol.test.mjs test/bootheader.test.mjs test/whole_img.test.mjs",
-    "test:ui": "node test/run-ui.mjs"
+    "test:ui": "node test/run-ui.mjs",
+    "test": "npm run test:unit && npm run test:ui"
   },
   "devDependencies": {
     "playwright": "^1.49.0"
