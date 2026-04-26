@@ -1,0 +1,15 @@
+{
+  "name": "bflb-web-tool",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Web Serial flasher for Bouffalo Lab BL60x/BL61x/BL70x(L)/BL606P/BL808 chips.",
+  "scripts": {
+    "serve": "python3 -m http.server 8765",
+    "test:unit": "node --test test/protocol.test.mjs test/bootheader.test.mjs test/whole_img.test.mjs",
+    "test:ui": "node test/run-ui.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  }
+}

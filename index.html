@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BLFB Web Flasher</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="card">
+    <header>
+      <h1>BLFB Web Flasher</h1>
+      <p class="sub">Flash Bouffalo Lab BL60x / BL61x / BL70x(L) / BL606P / BL808 chips from your browser using <strong>Web Serial</strong>.</p>
+    </header>
+
+    <section class="step" id="step-chip">
+      <label class="step-num">1</label>
+      <div class="step-body">
+        <h2>Choose chip</h2>
+        <select id="chip-select" aria-label="Chip family"></select>
+      </div>
+    </section>
+
+    <section class="step" id="step-firmware">
+      <label class="step-num">2</label>
+      <div class="step-body">
+        <h2>Firmware</h2>
+        <div class="row">
+          <label class="file-btn" for="fw-file">Choose .bin&hellip;</label>
+          <input type="file" id="fw-file" accept=".bin" class="file-input" />
+          <span id="fw-file-name" class="file-name">No file selected</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="step" id="step-actions">
+      <label class="step-num">3</label>
+      <div class="step-body">
+        <h2>Connect &amp; flash</h2>
+        <div class="row">
+          <button id="connect-btn" class="primary">Connect &amp; Flash</button>
+          <label class="opt">Flash baud
+            <select id="opt-baud" aria-label="Flashing baud rate">
+              <option value="">Chip default</option>
+              <option value="230400">230 400</option>
+              <option value="460800">460 800</option>
+              <option value="921600">921 600</option>
+              <option value="1500000">1 500 000</option>
+              <option value="2000000" selected>2 000 000</option>
+              <option value="3000000">3 000 000</option>
+            </select>
+          </label>
+          <label class="opt"><input type="checkbox" id="opt-verify" checked /> Verify</label>
+          <label class="opt"><input type="checkbox" id="opt-reset"  checked /> Reset on done</label>
+        </div>
+        <div class="row monitor-row">
+          <button id="monitor-btn" class="ghost">Open serial monitor&hellip;</button>
+          <label class="opt">Monitor baud
+            <select id="opt-monitor-baud" aria-label="Monitor baud rate">
+              <option value="9600">9 600</option>
+              <option value="57600">57 600</option>
+              <option value="115200" selected>115 200</option>
+              <option value="230400">230 400</option>
+              <option value="460800">460 800</option>
+              <option value="921600">921 600</option>
+              <option value="2000000">2 000 000</option>
+            </select>
+          </label>
+          <label class="opt"><input type="checkbox" id="opt-monitor-after" /> Auto-open after flash</label>
+        </div>
+        <progress id="progress" value="0" max="1"></progress>
+        <div id="progress-label" class="progress-label">Idle</div>
+      </div>
+    </section>
+
+    <section class="log-section">
+      <header>
+        <h2>Log</h2>
+        <button id="clear-log" class="ghost">Clear</button>
+      </header>
+      <pre id="log" aria-live="polite"></pre>
+    </section>
+
+    <footer>
+      <p>
+        Web Serial requires Chrome / Edge / Opera 89+ (Chromium) on a secure origin (https or <code>http://localhost</code>).
+        Auto-boot via DTR/RTS only works on boards wired for it.
+      </p>
+    </footer>
+  </main>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

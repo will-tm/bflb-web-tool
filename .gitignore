@@ -1,0 +1,27 @@
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Playwright / Chromium download cache & test artifacts
+test-results/
+playwright-report/
+
+# OS / editor cruft
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Claude Code internal state
+.claude/
+
+# Build / dev server scratch
+*.log
+log/
+__pycache__/
+
+# Anything an end user might generate locally
+whole_img_*.bin
+bootinfo_*_user.bin
