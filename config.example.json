@@ -1,0 +1,18 @@
+{
+  "_comment": "Copy to config.json (gitignored) on the host. Everything is optional — omit a key to disable that feature.",
+
+  "_plausible_classic": {
+    "domain": "your-domain.example",
+    "src":    "https://plausible.io/js/script.js"
+  },
+
+  "_plausible_tagged_events": {
+    "src":  "https://plausible.web.org/js/pa-XXXXXXXX-YYYYYYYYYY.js",
+    "init": true
+  },
+
+  "plausible": {
+    "src":  "https://plausible.web.org/js/pa-XXXXXXXX-YYYYYYYYYY.js",
+    "init": true
+  }
+}

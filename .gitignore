@@ -25,3 +25,7 @@ __pycache__/
 # Anything an end user might generate locally
 whole_img_*.bin
 bootinfo_*_user.bin
+
+# Per-host runtime config (analytics keys, custom branding, …).
+# Copy config.example.json to config.json on the host.
+config.json

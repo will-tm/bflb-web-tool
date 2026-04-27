@@ -84,6 +84,24 @@ server {
 }
 ```
 
+### Per-host runtime config (analytics, etc)
+
+Copy `config.example.json` to `config.json` next to the static files. The real
+`config.json` is gitignored so deployment-specific keys never end up in the
+public repo. Example:
+
+```json
+{
+  "plausible": {
+    "domain": "your-domain.example",
+    "src":    "https://plausible.io/js/script.js"
+  }
+}
+```
+
+`src/config.js` fetches it at boot, injects the Plausible script if present,
+and silently skips if the file isn't there.
+
 ### Docker / nginx one-liner
 
 ```bash

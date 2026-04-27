@@ -5,12 +5,16 @@ import { SerialTransport } from './transport.js';
 import { flash, prepareRegions } from './flasher.js';
 import { hasBootHeader } from './whole_img.js';
 import { openMonitor } from './monitor.js';
+import { loadHostConfig, applyHostConfig } from './config.js';
 
 let activeMonitor = null;
 
 const $ = (id) => document.getElementById(id);
 
 function init() {
+  // Pull host-local config (analytics, etc) without blocking UI startup.
+  loadHostConfig().then(applyHostConfig);
+
   const sel = $('chip-select');
   for (const c of listChips()) {
     const o = document.createElement('option');
