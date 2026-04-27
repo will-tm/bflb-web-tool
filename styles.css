@@ -175,7 +175,10 @@ progress::-moz-progress-bar { background: var(--accent); }
   padding: 10px 12px;
   margin: 0;
   height: 220px;
+  min-height: 80px;
+  max-height: 80vh;
   overflow: auto;
+  resize: vertical;
   font-family: var(--mono);
   font-size: 12px;
   white-space: pre-wrap;
