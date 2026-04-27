@@ -127,13 +127,23 @@ export class ISPClient {
    * Read a response frame.
    * @param {boolean} expectPayload - whether to read trailing length+payload
    * @param {number} timeout - ms; 0 = wait forever (used for long erases)
+   *
+   * Mirrors bflb_interface_uart.if_deal_response: when payload is expected,
+   * read 2-byte chunks in a loop and discard any extra "OK" sequences before
+   * treating the next 2 bytes as the length field. Some firmware sometimes
+   * emits a duplicate OK ack before the length, especially over USB-CDC.
    */
   async receiveResponse(expectPayload = false, timeout = 1000) {
     const head = await this.transport.read(2, timeout);
     const tag = TEXT_DECODER.decode(head);
     if (tag === 'OK') {
       if (!expectPayload) return new Uint8Array(0);
-      const lenBuf = await this.transport.read(2, timeout);
+      // Skip any extra "OK" pairs (defensive — see if_deal_response()).
+      let lenBuf;
+      while (true) {
+        lenBuf = await this.transport.read(2, timeout);
+        if (!(lenBuf[0] === 0x4F && lenBuf[1] === 0x4B)) break;
+      }
       const dataLen = lenBuf[0] | (lenBuf[1] << 8);
       if (dataLen === 0) return new Uint8Array(0);
       return await this.transport.read(dataLen, timeout);
@@ -149,6 +159,14 @@ export class ISPClient {
 
   /** Send + receive, retrying on PD until OK / FL / timeout. */
   async cmdAck(cmd, payload, expectPayload = false, timeout = 1000) {
+    // Drain any stale bytes in the RX buffer first. If a previous response
+    // got out of sync (eg. UART noise inserting a phantom 0xff), the leftover
+    // would otherwise corrupt this read. Discarded bytes are gone; the next
+    // legit response is fully framed by sendCommand.
+    const stale = this.transport.drainBuffered();
+    if (stale.length) {
+      this.log(`drained ${stale.length} stale RX byte(s) before cmd 0x${cmd.toString(16)}`);
+    }
     await this.sendCommand(cmd, payload, true);
     while (true) {
       const r = await this.receiveResponse(expectPayload, timeout);

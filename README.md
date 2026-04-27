@@ -92,11 +92,6 @@ docker run -d -p 8080:80 -v $(pwd):/usr/share/nginx/html:ro nginx:alpine
 
 (Add a TLS-terminating reverse proxy for production.)
 
-## Browser support
-
-Chrome / Edge / Opera 89+ on macOS, Linux, Windows, ChromeOS. Web Serial is
-not available on Firefox or Safari.
-
 ## License
 
 MIT.

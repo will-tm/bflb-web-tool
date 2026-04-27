@@ -145,7 +145,14 @@ export async function flash({ chip, port, regions, flashBaud = null, verify = tr
         const expected = new Uint8Array(await crypto.subtle.digest('SHA-256', data));
         setProg(0.80 + 0.17 * (vDone / total), `Verifying SHA256 @ 0x${address.toString(16)}`);
         log(`Verifying SHA256 of 0x${address.toString(16)}+${data.length}`);
-        const got = await isp.flashReadSha(address, data.length);
+        // Retry once on mismatch — matches bflb_eflash_loader.flash_load_opt's
+        // single-retry policy. Transient framing glitches on the wire (USB-CDC
+        // stutter, polyfill chunking) usually clear on a second pass.
+        let got = await isp.flashReadSha(address, data.length);
+        if (!sha256Equal(got, expected)) {
+          log(`  mismatch — retrying once (chip=${hex(got)})`, 'warn');
+          got = await isp.flashReadSha(address, data.length);
+        }
         if (!sha256Equal(got, expected)) {
           throw new Error(
             `SHA256 mismatch @ 0x${address.toString(16)}+${data.length}\n` +

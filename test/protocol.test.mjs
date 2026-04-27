@@ -46,6 +46,13 @@ test('receiveResponse parses OK with payload', async () => {
   assert.deepEqual([...r], [0xAA, 0xBB, 0xCC, 0xDD]);
 });
 
+// cmdAck now drains rxBuf at the start of every command (defensive against
+// off-by-one corruption from UART noise). For tests that exercise cmdAck via
+// public methods, inject the canned response *after* sendCommand has run.
+function injectAfterSend(t, bytes, delayMs = 5) {
+  setTimeout(() => t.injectRx(bytes), delayMs);
+}
+
 test('receiveResponse FL throws ISPError with code', async () => {
   const t = new LoopbackTransport();
   const c = new ISPClient(CHIPS.bl702, t);
@@ -56,21 +63,20 @@ test('receiveResponse FL throws ISPError with code', async () => {
 test('cmdAck retries through PD and resolves on OK', async () => {
   const t = new LoopbackTransport();
   const c = new ISPClient(CHIPS.bl702, t);
-  // first reply PD, then OK with no payload
-  t.injectRx([...ENC_PD]);
-  t.injectRx([...ENC_OK]);
+  // first reply PD, then OK with no payload — inject after the cmd is sent
+  injectAfterSend(t, [...ENC_PD]);
+  injectAfterSend(t, [...ENC_OK], 20);
   await c.cmdAck(CMD.FLASH_ERASE, new Uint8Array(8), false, 200);
 });
 
 test('flashWrite chunks payload and includes leading address', async () => {
   const t = new LoopbackTransport();
   const c = new ISPClient(CHIPS.bl702, t);
-  // pre-stage one OK ack per chunk
   const payload = new Uint8Array(2048 + 100); // 2 chunks (2048-byte chunk, then 100)
   for (let i = 0; i < payload.length; i++) payload[i] = i & 0xff;
-  // Inject responses ahead of writes so they don't block
-  t.injectRx([...ENC_OK]);
-  t.injectRx([...ENC_OK]);
+  // Inject responses after each chunk's drain+send.
+  injectAfterSend(t, [...ENC_OK], 5);
+  injectAfterSend(t, [...ENC_OK], 30);
   await c.flashWrite(0x10000, payload);
   const tx = t.takeTx();
   // First frame: cmd=0x31, len=2048+4=2052
@@ -112,7 +118,7 @@ test('getBootInfo decodes BL702 chip id correctly', async () => {
   const reply = new Uint8Array(24);
   reply.set([1, 2, 3, 4], 0);
   reply.set([0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x11, 0x22, 0x33], 16);
-  t.injectRx([...ENC_OK, 24, 0, ...reply]);
+  injectAfterSend(t, [...ENC_OK, 24, 0, ...reply]);
   const info = await c.getBootInfo();
   assert.deepEqual([...info.bootRom], [1, 2, 3, 4]);
   // BL702 chip id is preserved verbatim
@@ -126,7 +132,7 @@ test('getBootInfo reverses chip id for BL602/BL616/BL808 family', async () => {
   reply.set([0xFF, 0xFF, 0xFF, 0xFF], 0);
   // chip id bytes at offset 12, length 8
   reply.set([0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88], 12);
-  t.injectRx([...ENC_OK, 20, 0, ...reply]);
+  injectAfterSend(t, [...ENC_OK, 20, 0, ...reply]);
   const info = await c.getBootInfo();
   assert.equal(info.chipIdHex, '8877665544332211');
   assert.equal(info.alreadyInLoader, true);
