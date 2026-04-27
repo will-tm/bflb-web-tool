@@ -38,6 +38,10 @@ export class LoopbackTransport {
   async setSignals(s) { Object.assign(this.signals, s); }
   async setBaudRate(b) { this.baud = b; }
   async close() {}
+  usbInfo() { return this._usb || null; }
+  setUsbInfo(usb) { this._usb = usb; }
+  async magicTriggerBoufBootMode() { this.magicCalled = (this.magicCalled || 0) + 1; }
+  async magicResetNativeUsb() { this.magicResetCalled = (this.magicResetCalled || 0) + 1; }
 
   // Helpers for the fake chip --------------------------------------------
   /** Push bytes that the host will receive next. */

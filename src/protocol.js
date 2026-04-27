@@ -178,7 +178,30 @@ export class ISPClient {
   // ----------- handshake / boot info -----------
 
   async toggleBootMode({ holdMs = 50, releaseMs = 100 } = {}) {
-    // Normal DTR/RTS dance per blisp:
+    // Pick the right boot-mode trigger based on the USB device's VID/PID.
+    //
+    // Bouffalo bridges (CKLink-Lite 42BF:B210) and BL chips with native USB
+    // (FFFF:FFFF) ignore the CDC SetControlLineState command — toggling DTR/RTS
+    // through navigator.serial.setSignals() does nothing on them. Instead the
+    // bridge / chip firmware intercepts magic strings written to the data
+    // endpoint. See bflb_interface_uart.py for the reference implementation.
+    const usb = this.transport.usbInfo();
+    if (usb) {
+      // CKLink-Lite USB-Serial bridge — translates magic strings to GPIO
+      if (usb.vid === 0x42BF && usb.pid === 0xB210) {
+        this.log('CKLink-Lite detected (42BF:B210) — using BOUFFALOLAB5555 magic-string boot trigger');
+        await this.transport.magicTriggerBoufBootMode();
+        await sleep(50);
+        return;
+      }
+      // BL chip with native USB (BootROM as USB device)
+      if (usb.vid === 0xFFFF && usb.pid === 0xFFFF) {
+        this.log('Native-USB BL chip detected (FFFF:FFFF) — using BOUFFALOLAB5555RESET self-reset');
+        await this.transport.magicResetNativeUsb();
+        return;
+      }
+    }
+    // Generic USB-Serial bridge: standard DTR/RTS dance per blisp.
     //   RTS=on, DTR=on  -> reset asserted, BOOT high
     //   wait 50 ms
     //   DTR=off         -> release boot pin (still in reset)

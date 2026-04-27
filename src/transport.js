@@ -114,6 +114,55 @@ export class SerialTransport {
     if (Object.keys(sig).length) await this.port.setSignals(sig);
   }
 
+  /**
+   * VID/PID of the underlying USB device, if exposed by the browser.
+   * Returns null on non-USB ports or when the browser hides the IDs.
+   */
+  usbInfo() {
+    try {
+      const info = this.port.getInfo?.() || {};
+      if (info.usbVendorId == null || info.usbProductId == null) return null;
+      return { vid: info.usbVendorId, pid: info.usbProductId };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /**
+   * Bouffalo "magic string" boot-mode trigger used by USB-CDC bridges that
+   * ignore the standard CDC SetControlLineState (CKLink-Lite, etc).
+   *
+   * The bridge firmware intercepts these literal strings written to the data
+   * endpoint and translates them into GPIO toggles on the chip's BOOT/RESET
+   * pins. Mirrors bflb_interface_uart.py "bouffalo" mode (lines 924-936,
+   * 1159-1171): DTR0 then RTS0 then RTS1.
+   */
+  async magicTriggerBoufBootMode() {
+    const enc = new TextEncoder();
+    await this.write(enc.encode('BOUFFALOLAB5555DTR0'));
+    await sleep(10);
+    await this.write(enc.encode('BOUFFALOLAB5555RTS0'));
+    await sleep(10);
+    await this.write(enc.encode('BOUFFALOLAB5555RTS1'));
+  }
+
+  /**
+   * Magic-string reset for chips with NATIVE USB (BL702/BL702L USB variants,
+   * etc — VID:PID FFFF:FFFF). The chip's BootROM listens for this exact
+   * string + 2 trailing bytes (boot_revert, reset_revert) and self-resets
+   * into ISP mode. Mirrors bflb_interface_uart.bl_usb_serial_write.
+   */
+  async magicResetNativeUsb({ bootRevert = 0, resetRevert = 1 } = {}) {
+    const enc = new TextEncoder();
+    const head = enc.encode('BOUFFALOLAB5555RESET');
+    const buf = new Uint8Array(head.length + 2);
+    buf.set(head, 0);
+    buf[head.length]     = bootRevert & 0xFF;
+    buf[head.length + 1] = resetRevert & 0xFF;
+    await this.write(buf);
+    await sleep(50);
+  }
+
   async setBaudRate(baud) {
     // Web Serial cannot mutate baud on an open port; close + reopen.
     if (!SUPPORTED_BAUDS.includes(baud)) {

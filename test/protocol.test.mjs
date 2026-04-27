@@ -105,6 +105,37 @@ test('handshake sends 0x55 burst sized for chip multiplier and accepts OK', asyn
   for (const b of tx) assert.equal(b, 0x55);
 });
 
+test('toggleBootMode uses CKLink magic strings on VID:PID 42BF:B210', async () => {
+  const t = new LoopbackTransport();
+  t.setUsbInfo({ vid: 0x42BF, pid: 0xB210 });
+  // Sentinel — toggleBootMode should NOT touch this if it picks the magic path.
+  t.signals.requestToSend = 'untouched';
+  const c = new ISPClient(CHIPS.bl702l, t);
+  await c.toggleBootMode();
+  assert.equal(t.magicCalled, 1, 'should have called magicTriggerBoufBootMode once');
+  assert.equal(t.signals.requestToSend, 'untouched', 'should NOT have touched setSignals');
+});
+
+test('toggleBootMode uses BOUFFALOLAB5555RESET on VID:PID FFFF:FFFF (native USB)', async () => {
+  const t = new LoopbackTransport();
+  t.setUsbInfo({ vid: 0xFFFF, pid: 0xFFFF });
+  const c = new ISPClient(CHIPS.bl702l, t);
+  await c.toggleBootMode();
+  assert.equal(t.magicResetCalled, 1, 'should have called magicResetNativeUsb once');
+});
+
+test('toggleBootMode falls back to standard DTR/RTS on generic USB-Serial', async () => {
+  const t = new LoopbackTransport();
+  t.setUsbInfo({ vid: 0x10C4, pid: 0xEA60 }); // Silicon Labs CP2102
+  const c = new ISPClient(CHIPS.bl702l, t);
+  await c.toggleBootMode();
+  // After the dance, DTR ends low and RTS ends low.
+  assert.equal(t.signals.dataTerminalReady, false);
+  assert.equal(t.signals.requestToSend, false);
+  assert.ok(!t.magicCalled);
+  assert.ok(!t.magicResetCalled);
+});
+
 test('handshake throws after exhausting attempts', async () => {
   const t = new LoopbackTransport();
   const c = new ISPClient(CHIPS.bl702, t);
